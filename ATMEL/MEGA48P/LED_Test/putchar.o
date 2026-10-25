@@ -1,0 +1,26 @@
+XL
+H 1 areas 2 global symbols
+M putchar.c
+S __textmode Ref0000
+A text size 2A flags 0
+dbfile putchar.c
+dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\putchar.c
+dbfunc e putchar 0 fI
+dbsym r c 14 c
+dbline FFFFFFFF 4
+dbline E 4
+dbline F 4
+dbline 10 18
+dbline 12 1C
+dbline 11 1C
+dbline 13 20
+dbline 14 22
+dbline FFFFFFFE 26
+dbline 0 26
+S _putchar$device_specific$ Def0000
+T 00 00 4A 93 40 2F 20 90 00 00 30 90 01 00 22 20
+R 00 00 00 00 02 08 00 00 02 0C 00 00
+T 0E 00 11 F4 33 20 21 F0 4A 30 11 F4 0D E0 F2 DF
+R 00 00 00 00
+T 1C 00 5D 9B FE CF 4C B9 04 2F 11 27 49 91 08 95
+R 00 00 00 00

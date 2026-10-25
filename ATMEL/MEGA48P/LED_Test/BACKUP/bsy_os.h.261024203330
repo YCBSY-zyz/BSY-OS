@@ -1,0 +1,66 @@
+#ifndef  __BSY_OS_H
+#define  __BSY_OS_H
+
+
+#include "stdlib.h"
+#include   <iom48pv.h>
+
+     
+
+#define    uchar   unsigned char
+#define    uint    unsigned int
+
+
+
+typedef enum{
+    STOP = 0,           //停止态
+    OK = 1,             //就绪态
+    RUN = 2             //运行态
+}RunSta_Type;
+
+
+//运行任务结构体定义
+typedef struct{
+    uint                 R_CYCLE;    	//执行周期，每r_cycle个ms执行一次,默认参数，不可变
+    uint                 NMS;        	//延时减计数值，值可变，动态加载R_CYCLE或V_NMS
+    RunSta_Type         R_STATUS;   	//运行状态
+    uchar                  LEVEL;      	//运行级别 0 --- 255，越小优先级越高，不能重复顺序排列，最大值根据实际调整
+    uchar                LOCK;       	//运行锁， 0 开锁允许运行  1 上锁，禁止运行
+    void (*pf)  (void);        			//运行任务函数，有参无返回。
+}RUN_Handle_Type;
+
+
+
+//双向链表，用于存储调度的程序及运行参数
+typedef struct node{
+	uchar id;					//节点id，等于线程LEVEL，任务的优先级，值越小优先级越高			
+	RUN_Handle_Type *task;		//任务句柄
+	struct node *pre;			//前一个节点地址
+	struct node *next;			//后一个节点地址
+}Stud_Type;
+
+
+void Bsy_Os_Init(int len);
+
+//void  delay_ms(uint ms);
+
+//添加任务到任务列表
+void Task_Add(RUN_Handle_Type *handle);
+
+//搜索节点，如果有大于id的节点，则返回第一个大于id的节点，没有则返回尾节点
+Stud_Type * Search_Node(Stud_Type *p , uchar id);
+
+//任务初始化
+void Task_Init(void);
+
+//删除任务，将任务从列表中删除
+void Task_Del(Stud_Type *sp);
+
+//void Task_Delay_ms(uint nms);
+
+void Task_Schedule(void);
+
+
+
+#endif
+

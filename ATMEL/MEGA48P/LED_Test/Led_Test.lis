@@ -1,0 +1,84 @@
+                        .module Led_Test.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile Led_Test.c
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\Led_Test.c
+ 0000                   .dbfunc e port_init _port_init fV
+                        .even
+ 0000           _port_init::
+ 0000                   .dbline -1
+ 0000                   .dbline 8
+ 0000           ; #include   "led_test.h"
+ 0000           ; #include   "bsy_os.h"
+ 0000           ; #include   "led.h"
+ 0000           ; 
+ 0000           ; 
+ 0000           ; //端口初始化函数
+ 0000           ; void port_init(void)  
+ 0000           ; {
+ 0000                   .dbline 11
+ 0000           ;     //PORTB = 0x01;
+ 0000           ;     //DDRB  = 0xfe;
+ 0000           ;     DDRC  = 0x3c;           //led0-->PC2;led1-->PC3;led2-->PC4;
+ 0000 8CE3              ldi R24,60
+ 0002 87B9              out 0x7,R24
+ 0004                   .dbline 12
+ 0004           ;     PORTC = 0x00;           //初始化LED端口
+ 0004 2224              clr R2
+ 0006 28B8              out 0x8,R2
+ 0008                   .dbline -2
+ 0008           L3:
+ 0008                   .dbline 0 ; func end
+ 0008 0895              ret
+ 000A                   .dbend
+ 000A                   .dbfunc e main _main fV
+                        .even
+ 000A           _main::
+ 000A                   .dbline -1
+ 000A                   .dbline 19
+ 000A           ;     //PORTD = 0xf8;
+ 000A           ;     //DDRD  = 0xe6;
+ 000A           ; }
+ 000A           ; 
+ 000A           ; //主函数
+ 000A           ; void  main (void)
+ 000A           ; {
+ 000A                   .dbline 20
+ 000A           ;     port_init();              //初始化端口
+ 000A FADF              rcall _port_init
+ 000C                   .dbline 23
+ 000C           ;     
+ 000C           ;     //每个线程任务占用不到20 Byte内存，内存按照任务 x 20计算
+ 000C           ;       Bsy_Os_Init(200);       //初始化BSY-OS操作系统，分配堆内存200Byte
+ 000C 08EC              ldi R16,200
+ 000E 10E0              ldi R17,0
+ 0010 00D0              rcall _Bsy_Os_Init
+ 0012                   .dbline 24
+ 0012           ;     SEI();                            //开启中断
+ 0012 7894              sei
+ 0014                   .dbline 26
+ 0014           ;     
+ 0014           ;       Task_led0();            //添加LED 任务0
+ 0014 00D0              rcall _Task_led0
+ 0016 01C0              rjmp L6
+ 0018           L5:
+ 0018                   .dbline 29
+ 0018           ;               
+ 0018           ;     while(1)
+ 0018           ;     {
+ 0018                   .dbline 30
+ 0018           ;         Task_Schedule();      //系统调度运行函数
+ 0018 00D0              rcall _Task_Schedule
+ 001A                   .dbline 31
+ 001A           ;       } 
+ 001A           L6:
+ 001A                   .dbline 28
+ 001A FECF              rjmp L5
+ 001C           X0:
+ 001C                   .dbline -2
+ 001C           L4:
+ 001C                   .dbline 0 ; func end
+ 001C 0895              ret
+ 001E                   .dbend
+ 001E           ; }
+ 001E           ; 
+ 001E           ; 

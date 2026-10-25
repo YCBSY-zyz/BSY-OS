@@ -1,0 +1,142 @@
+                        .module led.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile led.c
+                        .area data(ram, con, rel)
+ 0000                   .dbfile led.c
+ 0000           _ledFlag::
+ 0000                   .blkb 1
+                        .area idata
+ 0000 00                .byte 0
+                        .area data(ram, con, rel)
+ 0001                   .dbfile led.c
+ 0001                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\led.c
+ 0001                   .dbsym e ledFlag _ledFlag c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\led.c
+ 0000                   .dbfunc e Led_Run _Led_Run fV
+                        .even
+ 0000           _Led_Run::
+ 0000                   .dbline -1
+ 0000                   .dbline 12
+ 0000           ; #include "led.h"
+ 0000           ; #include "bsy_os.h"
+ 0000           ; 
+ 0000           ; //定义任务优先级，值越小优先级越高，有效值0 --- 255
+ 0000           ; #define      THREAD0     0
+ 0000           ; 
+ 0000           ; 
+ 0000           ; uchar  ledFlag = 0;
+ 0000           ; 
+ 0000           ; //LED运行任务
+ 0000           ; void Led_Run(void)
+ 0000           ; {
+ 0000                   .dbline 13
+ 0000           ;       if(ledFlag != 0){       //如果标识为非0值
+ 0000 20900000          lds R2,_ledFlag
+ 0004 2220              tst R2
+ 0006 21F0              breq L4
+ 0008           X0:
+ 0008                   .dbline 13
+ 0008                   .dbline 14
+ 0008           ;                  led0_on;         //点亮led0   PC2
+ 0008 429A              sbi 0x8,2
+ 000A                   .dbline 15
+ 000A           ;                  led1_on;         //点亮led1   PC3
+ 000A 439A              sbi 0x8,3
+ 000C                   .dbline 16
+ 000C           ;                  led2_on;         //点亮led2   PC4
+ 000C 449A              sbi 0x8,4
+ 000E                   .dbline 17
+ 000E           ;       }else{
+ 000E 03C0              rjmp L5
+ 0010           L4:
+ 0010                   .dbline 17
+ 0010                   .dbline 18
+ 0010           ;                  led0_off;        //关闭led0
+ 0010 4298              cbi 0x8,2
+ 0012                   .dbline 19
+ 0012           ;                  led1_off;        //关闭led1
+ 0012 4398              cbi 0x8,3
+ 0014                   .dbline 20
+ 0014           ;                  led2_off;        //关闭led2
+ 0014 4498              cbi 0x8,4
+ 0016                   .dbline 21
+ 0016           ;       }
+ 0016           L5:
+ 0016                   .dbline 22
+ 0016           ;       ledFlag = ~ledFlag;     //标识取反
+ 0016 20900000          lds R2,_ledFlag
+ 001A 2094              com R2
+ 001C 20920000          sts _ledFlag,R2
+ 0020                   .dbline -2
+ 0020           L3:
+ 0020                   .dbline 0 ; func end
+ 0020 0895              ret
+ 0022                   .dbend
+ 0022                   .dbfunc e Task_led0 _Task_led0 fV
+                        .even
+ 0022           _Task_led0::
+ 0022                   .dbline -1
+ 0022                   .dbline 30
+ 0022           ; }
+ 0022           ; 
+ 0022           ; //定义LED任务结构体变量
+ 0022           ; RUN_Handle_Type  LED0_Task_Handle;
+ 0022           ; 
+ 0022           ; //创建LED运行任务函数
+ 0022           ; void Task_led0(void)
+ 0022           ; {
+ 0022                   .dbline 31
+ 0022           ;       LED0_Task_Handle.R_CYCLE = 500;       //500ms延时周期
+ 0022 84EF              ldi R24,500
+ 0024 91E0              ldi R25,1
+ 0026 90930100          sts _LED0_Task_Handle+1,R25
+ 002A 80930000          sts _LED0_Task_Handle,R24
+ 002E                   .dbline 32
+ 002E           ;     LED0_Task_Handle.NMS = 500;           //延时计数值，递减计数
+ 002E 90930300          sts _LED0_Task_Handle+2+1,R25
+ 0032 80930200          sts _LED0_Task_Handle+2,R24
+ 0036                   .dbline 33
+ 0036           ;     LED0_Task_Handle.R_STATUS = STOP;     //运行状态STOP
+ 0036 2224              clr R2
+ 0038 20920400          sts _LED0_Task_Handle+4,R2
+ 003C                   .dbline 34
+ 003C           ;     LED0_Task_Handle.LEVEL = THREAD0;     //线程优先级0
+ 003C 20920500          sts _LED0_Task_Handle+5,R2
+ 0040                   .dbline 35
+ 0040           ;     LED0_Task_Handle.LOCK = 0;          //0 不锁定，1 锁定
+ 0040 20920600          sts _LED0_Task_Handle+6,R2
+ 0044                   .dbline 36
+ 0044           ;     LED0_Task_Handle.pf = Led_Run;              //线程调度函数
+ 0044 80E0              ldi R24,<PL_Led_Run
+ 0046 90E0              ldi R25,>PL_Led_Run
+ 0048 90930800          sts _LED0_Task_Handle+7+1,R25
+ 004C 80930700          sts _LED0_Task_Handle+7,R24
+ 0050                   .dbline 37
+ 0050           ;     Task_Add(&LED0_Task_Handle);                //添加任务到任务列表
+ 0050 00E0              ldi R16,<_LED0_Task_Handle
+ 0052 10E0              ldi R17,>_LED0_Task_Handle
+ 0054                   .dbline -2
+ 0054           L6:
+ 0054                   .dbline 0 ; func end
+ 0054 00C0              rjmp _Task_Add
+ 0056                   .dbend
+                        .area bss(ram, con, rel)
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\led.c
+ 0000           _LED0_Task_Handle::
+ 0000                   .blkb 9
+ 0009                   .dbstruct 0 9 .2
+ 0009                   .dbfield 0 R_CYCLE i
+ 0009                   .dbfield 2 NMS i
+ 0009                   .dbfield 4 R_STATUS c
+ 0009                   .dbfield 5 LEVEL c
+ 0009                   .dbfield 6 LOCK c
+ 0009                   .dbfield 7 pf pfV
+ 0009                   .dbend
+ 0009                   .dbsym e LED0_Task_Handle _LED0_Task_Handle S[.2]
+ 0009           ; }
+ 0009           ; 
+ 0009           ; 
+ 0009           ; 
+                        .area  func_lit
+ 0000 0000      PL_Led_Run:     .word `_Led_Run

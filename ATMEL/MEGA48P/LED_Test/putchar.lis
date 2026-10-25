@@ -1,0 +1,68 @@
+                        .module putchar.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile putchar.c
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\putchar.c
+ 0000                   .dbfunc e putchar _putchar$device_specific$ fI
+ 0000           ;              c -> R20
+                        .even
+ 0000           _putchar$device_specific$::
+ 0000 4A93              st -y,R20
+ 0002 402F              mov R20,R16
+ 0004                   .dbline -1
+ 0004                   .dbline 14
+ 0004           ; /* This putchar works with the 8515 UART. It will work with other devices
+ 0004           ;  * if their UART registers use the same names.  If the UART IO locations
+ 0004           ;  * are different from the 8515, then you will also have to change the
+ 0004           ;  * #include header file statement.
+ 0004           ;  *
+ 0004           ;  * This works with all the classic AVRs and some of the Mega devices as is.
+ 0004           ;  */
+ 0004           ; #include <io8515v.h>
+ 0004           ; #include <stdio.h>
+ 0004           ; 
+ 0004           ; extern int _textmode;
+ 0004           ; 
+ 0004           ; int putchar(char c)
+ 0004           ; {
+ 0004                   .dbline 15
+ 0004           ;     if (_textmode && c == '\n')
+ 0004 20900000          lds R2,__textmode
+ 0008 30900100          lds R3,__textmode+1
+ 000C 2220              tst R2
+ 000E 11F4              brne X0
+ 0010 3320              tst R3
+ 0012 21F0              breq L5
+ 0014           X0:
+ 0014 4A30              cpi R20,10
+ 0016 11F4              brne L5
+ 0018           X1:
+ 0018                   .dbline 16
+ 0018           ;         putchar('\r');
+ 0018 0DE0              ldi R16,13
+ 001A F2DF              rcall _putchar$device_specific$
+ 001C           L4:
+ 001C                   .dbline 18
+ 001C           ;     while ((USR & 0x20) == 0)   // UDRE, data register empty
+ 001C           ;         ;
+ 001C           L5:
+ 001C                   .dbline 17
+ 001C 5D9B              sbis 0xb,5
+ 001E FECF              rjmp L4
+ 0020           X2:
+ 0020                   .dbline 19
+ 0020           ;     UDR = c;
+ 0020 4CB9              out 0xc,R20
+ 0022                   .dbline 20
+ 0022           ;     return c;
+ 0022 042F              mov R16,R20
+ 0024 1127              clr R17
+ 0026                   .dbline -2
+ 0026           L1:
+ 0026                   .dbline 0 ; func end
+ 0026 4991              ld R20,y+
+ 0028 0895              ret
+ 002A                   .dbsym r c 20 c
+ 002A                   .dbend
+ 002A           ; }
+ 002A           ; 
+ 002A           ; 

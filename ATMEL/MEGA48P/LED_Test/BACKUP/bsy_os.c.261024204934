@@ -1,0 +1,204 @@
+#include "bsy_os.h"
+#include <stdio.h>
+/*******************************************************************
+* 文件名  ：BSY-OS.c
+* 版本    : V1.0
+* 描述    ：贝斯源BSY-OS实时操作系统
+* 单片机  ：Atmega48p/8M 如果使用其他单片机修改定时器和引入对应头文件       
+* 硬件连接：系统占用TIMER2定时器，中断周期1ms
+* 
+* 作者：张永正 yc_bsy@126.com
+********************************************************************/
+extern char _bss_end;
+
+
+Stud_Type *root;		 //双链表根节点
+
+uchar cur_thread = 0;	 //当前正在运行的线程号
+
+uint delay_cnt = 0;      //delay_ms专用计数值
+
+
+
+
+/*******************************************************************************
+* 函数名  : Bsy_Os_Init
+* 描述    : BSY_OS内核及系统滴时钟使用TIMER2定时器
+* 输入    : int len 系统开辟的内存堆大小
+* 返回    : 无 
+* 说明    : 1)、系统内核工作频率 / 1000Hz	1ms时间周期
+*			
+*******************************************************************************/
+void Bsy_Os_Init(int len)
+{
+	//内核时钟节拍为1MS，即1000Hz频率，用于任务状态切换及延时处理
+    TCCR2A = 0x00;               //计数模式
+    TCCR2B = 0x04;               //64分频
+    TCNT2 = 124; 			         //8000000 / 64 / 125 = 1000Hz
+    TIMSK2 = 0x01;               //溢出中断
+	//开辟堆内存，长度len （200）Byte
+	_NewHeap(&_bss_end + 1, &_bss_end + len + 1); 	// 200 bytes heap 
+		
+    Task_Init();                                    //创建根节点           
+}
+
+
+//任务调度程序，ID越小优先级越高
+void Task_Schedule(void){
+    
+    //任务优先级高的执行，执行完成后再次查找最高的优先级且就绪的任务并开始执行，非顺序执行
+    Stud_Type *sp;          //双链表指针
+    sp = root->next;        //指向首节点，首节点id的值最小，root是根节点
+    while(sp){
+        //检查是否就绪，按照优先级高到低查找,执行完成后则重新开始，防止有高优先级的任务延误
+        if(sp->task->R_STATUS == OK){               //如果已就绪，则执行该任务
+            cur_thread = sp->task->LEVEL;			//获取当前正在运行的线程号
+			sp->task->R_STATUS = RUN;               //设置为运行态
+            sp->task->pf();            				//执行该函数
+            sp->task->R_STATUS = STOP;              //设置为停止态
+            break;                                 //结束本次循环，每次只执行一个任务
+        }else{
+            sp = sp->next;              //指向下一个节点或任务
+        }
+    }
+}
+
+
+//任务初始化，建立根节点
+void Task_Init(void)
+{
+	Stud_Type *p;  //申请双链表指针
+
+	p = (Stud_Type *)malloc(sizeof(Stud_Type));     //分配内存
+    p->id = 0;                                      //节点初始化
+	p->pre = NULL;
+	p->next = NULL;
+	p->task = NULL;
+	root = p;           //保存根节点
+}
+
+//查找第一个大于当前id的节点或如果没有则返回最后一个节点
+Stud_Type * Search_Node(Stud_Type *p , uchar id)
+{
+	Stud_Type *h;
+	h = p->next;
+	while(h){
+		if(h->id > id){	//找到第一个比id大的节点
+			return h;
+		}
+		if(h->next == NULL) return h;	//判断是否是到最后的节点，如果到最后也没找到，返回最后一个节点
+		else h = h->next;
+	}
+	return NULL;
+}
+
+/********************************************
+*   任务添加函数Task_Add
+*   RUN_Handle_Type  handle 任务句柄
+*   任务节点按照id（优先级）从小到大顺序排列
+*   函数类型为无返回值的函数
+********************************************/
+void Task_Add(RUN_Handle_Type *handle)
+{
+    Stud_Type *c, *n;
+    if(root->next == NULL){     //先判断根节点是否为空，就是当前没有节点
+        n = (Stud_Type *)malloc(sizeof(Stud_Type));		//申请内存
+		n->id = handle->LEVEL;			//添加任务id
+		n->task = handle;				//添加任务句柄
+		root->next = n;                 //设置根节点的next是新节点的地址
+        n->pre = root;                  //新节点的pre指向root
+        n->next = NULL;				    //设置新节点的next为NULL
+    }else{      //有根节点
+        c = Search_Node(root , handle->LEVEL);			//从根节点开始查找，查找第一个大于当前id的节点，没有就返回最后一个节点
+        if(c == NULL){
+			//printf("Search node error!\r\n");
+			;
+		} 
+        else{
+            n = (Stud_Type *)malloc(sizeof(Stud_Type));		//申请内存
+            n->id = handle->LEVEL;			//添加任务id
+            n->task = handle;				//添加任务句柄
+            if(c->id < handle->LEVEL){		//没有大于当前的id的节点，则追加到最后节点
+                n->next = NULL;				//设置新节点的next为NULL
+                c->next = n;				//设置查找的节点的next是新节点的地址
+                n->pre = c;                 //新节点的pre指向最后一个节点
+            }else if(c->id > handle->LEVEL){		//有大于当前的id的节点，则插入到当前节点之前
+                n->pre = c->pre;
+                c->pre->next = n;			//当前节点的上一个节点的next指向新节点
+                n->next = c;			    //新节点的next指向当前节点
+                c->pre = n;
+            }
+        }     
+    }
+	
+}
+
+
+//删除任务，将任务从列表中删除
+void Task_Del(Stud_Type *sp)
+{
+	// 假如按照后面排列：节点A-->节点SP-->节点B
+    sp->next->pre = sp->pre;        //后面节点B的pre指向要删除节点sp前面节点A的地址
+	sp->pre->next = sp->next;       //要删除节点SP前面节点A的next指向后面节点B的地址
+	free(sp);                       //删除节点，释放内存
+}
+
+
+//对任务延时，时间信号及任务状态进行管理
+void Task_Manager(void){
+    
+	Stud_Type *sp;
+	int i = 0; 
+	sp = root->next;	//指向首节点
+	while(sp){
+		//任务定时及任务状态处理
+		if(!sp->task->LOCK){                                  //如果没有上锁，则执行下面的延时
+        if(sp->task->NMS > 0) sp->task->NMS--;            //延时减一
+            if(sp->task->NMS == 0){
+                sp->task->R_STATUS = OK;                      //如果减到0，延时时间到设置状态为就绪态OK
+                sp->task->NMS = sp->task->R_CYCLE;            //加载延时周期
+            }
+        }else{
+            sp->task->NMS = sp->task->R_CYCLE;                 //如果上锁，加载延时周期，再次运行时重新开始
+        }
+		sp = sp->next;				//处理下一个节点
+	}
+}
+
+/******************************************
+*   任务中可变延时函数Task_Delay_ms
+*   nms 延时时间多少ms
+******************************************/
+/****************************
+void Task_Delay_ms(uint nms){
+    Stud_Type *sp;
+    sp = root->next;
+    
+    while(sp){
+        if(sp->id == cur_thread){       //找到对应的节点
+            sp->task->NMS = nms;    	//改变该节点的延时时间
+            break;
+        }
+        sp = sp->next;
+    }
+}
+***************************/
+//延时函数
+/******************
+void  delay_ms(uint ms)
+{
+    delay_cnt = ms;   //设置延时值
+    while(delay_cnt != 0);
+}
+*********************/
+
+#pragma interrupt_handler timer2_ovf_isr:10
+void timer2_ovf_isr(void)
+{ 
+    TCNT2 = 5;                             //1000hz频率，1ms中断一次
+    Task_Manager();                        //定时调用内核任务处理程序
+    //if(delay_cnt > 0) delay_cnt--;       //delay_ms专用计数器
+		
+}
+
+

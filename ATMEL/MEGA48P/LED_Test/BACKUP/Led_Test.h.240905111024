@@ -1,0 +1,61 @@
+#ifndef __DKX_MB_H_
+#define __DKX_MB_H_
+
+
+/*********************************************************
+*******BIT****DDRB****PORTB*******描述*********************
+PORTB: PB0     0        1         FGS         防干烧检测；    
+       PB1     1        0         GZHF        过载恢复；
+	    PB2     1        0         PWM         输出功率控制；
+	    PB3     1        0         MOSI        
+	    PB4     1        0         MISO        
+	    PB5     1        0         SCK        
+	    PB6     1        0         XTAL1       晶振；
+	    PB7     1        0         XTAX2       晶振；
+*******BIT****DDRC****PORTC*******描述*********************
+PORTC: PC0     0        0         VIN         VIN电压采样；
+       PC1     0        0         IIN         负载电流采样；
+	    PC2     1        0         LED3        指示灯3；
+	    PC3     1        0         LED4        指示灯4；
+	    PC4     1        0         LED5        指示灯5；
+	    PC5     1        0         LED6        指示灯6；
+	    PC6     0        0         RST         复位；
+*******BIT****DDRD****PORTD*******描述*********************
+PORTD: PD0     0        0         RXD        
+       PD1     1        0         TXD     
+	    PD2     1        0         LOAD_ON     加热控制；
+	    PD3     0        1         SET         设置功率基准值；
+	    PD4     0        1         OVERTEMP    散热器过热保护开关    
+	    PD5     1        1         FANS        风扇控制；
+	    PD6     1        1         DCF_ON      进水电磁阀控制；
+	    PD7     1        1         DDF_ON      排水电动阀控制；
+*********************************************************
+       ADC6                       TEMP1       散热器温度采样；
+	    ADC7                       TEMP        产水箱温度采样；
+*********************************************************/
+#include   <iom88pv.h>
+#include   <macros.h>
+#include   <eeprom.h>
+#include   "adc.h"
+//#include   "delay.h"
+#include   "bsy_os.h"
+#include   "bhjc.h"
+#include   "usart.h"
+#include   "txxy.h"
+#include   "rxtx.h"
+
+
+
+#define    uchar   unsigned char
+#define    uint    unsigned int
+
+extern  uchar   bh_flag, jr_flag, js_flag, ps_flag;
+extern  uchar 	rst_flag; 
+
+
+
+
+#endif
+
+
+

@@ -1,0 +1,890 @@
+                        .module bsy_os.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile bsy_os.c
+                        .area data(ram, con, rel)
+ 0000                   .dbfile bsy_os.c
+ 0000           _cur_thread::
+ 0000                   .blkb 1
+                        .area idata
+ 0000 00                .byte 0
+                        .area data(ram, con, rel)
+ 0001                   .dbfile bsy_os.c
+ 0001                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\bsy_os.c
+ 0001                   .dbsym e cur_thread _cur_thread c
+ 0001           _delay_cnt::
+ 0001                   .blkb 2
+                        .area idata
+ 0001 0000              .word 0
+                        .area data(ram, con, rel)
+ 0003                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\bsy_os.c
+ 0003                   .dbsym e delay_cnt _delay_cnt i
+                        .area text(rom, con, rel)
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\bsy_os.c
+ 0000                   .dbfunc e Bsy_Os_Init _Bsy_Os_Init fV
+ 0000           ;            len -> R10,R11
+                        .even
+ 0000           _Bsy_Os_Init::
+ 0000 AA92              st -y,R10
+ 0002 BA92              st -y,R11
+ 0004 5801              movw R10,R16
+ 0006                   .dbline -1
+ 0006                   .dbline 33
+ 0006           ; #include "bsy_os.h"
+ 0006           ; #include <stdio.h>
+ 0006           ; /*******************************************************************
+ 0006           ; * 文件名  ：BSY-OS.c
+ 0006           ; * 版本    : V1.0
+ 0006           ; * 描述    ：贝斯源BSY-OS实时操作系统
+ 0006           ; * 单片机  ：Atmega48p/8M 如果使用其他单片机修改定时器和引入对应头文件       
+ 0006           ; * 硬件连接：系统占用TIMER2定时器，中断周期1ms
+ 0006           ; * 
+ 0006           ; * 作者：张永正 yc_bsy@126.com
+ 0006           ; ********************************************************************/
+ 0006           ; extern char _bss_end;
+ 0006           ; 
+ 0006           ; 
+ 0006           ; Stud_Type *root;               //双链表根节点
+ 0006           ; 
+ 0006           ; uchar cur_thread = 0;  //当前正在运行的线程号
+ 0006           ; 
+ 0006           ; uint delay_cnt = 0;      //delay_ms专用计数值
+ 0006           ; 
+ 0006           ; 
+ 0006           ; 
+ 0006           ; 
+ 0006           ; /*******************************************************************************
+ 0006           ; * 函数名  : Bsy_Os_Init
+ 0006           ; * 描述    : BSY_OS内核及系统滴时钟使用TIMER2定时器
+ 0006           ; * 输入    : int len 系统开辟的内存堆大小
+ 0006           ; * 返回    : 无 
+ 0006           ; * 说明    : 1)、系统内核工作频率 / 1000Hz     1ms时间周期
+ 0006           ; *                     
+ 0006           ; *******************************************************************************/
+ 0006           ; void Bsy_Os_Init(int len)
+ 0006           ; {
+ 0006                   .dbline 35
+ 0006           ;       //内核时钟节拍为1MS，即1000Hz频率，用于任务状态切换及延时处理
+ 0006           ;     TCCR2A = 0x00;               //计数模式
+ 0006 2224              clr R2
+ 0008 2092B000          sts 176,R2
+ 000C                   .dbline 36
+ 000C           ;     TCCR2B = 0x04;               //64分频
+ 000C 84E0              ldi R24,4
+ 000E 8093B100          sts 177,R24
+ 0012                   .dbline 37
+ 0012           ;     TCNT2 = 131;                           //8000000/64/1000 = 125    256 - 125 = 131
+ 0012 83E8              ldi R24,131
+ 0014 8093B200          sts 178,R24
+ 0018                   .dbline 38
+ 0018           ;     TIMSK2 = 0x01;               //溢出中断
+ 0018 81E0              ldi R24,1
+ 001A 80937000          sts 112,R24
+ 001E                   .dbline 40
+ 001E           ;       //开辟堆内存，长度len （200）Byte
+ 001E           ;       _NewHeap(&_bss_end + 1, &_bss_end + len + 1);   // 200 bytes heap 
+ 001E 80E0              ldi R24,<__bss_end+1
+ 0020 90E0              ldi R25,>__bss_end+1
+ 0022 9501              movw R18,R10
+ 0024 280F              add R18,R24
+ 0026 391F              adc R19,R25
+ 0028 00E0              ldi R16,<__bss_end+1
+ 002A 10E0              ldi R17,>__bss_end+1
+ 002C 00D0              rcall __NewHeap
+ 002E                   .dbline 42
+ 002E           ;               
+ 002E           ;     Task_Init();                                    //创建根节点           
+ 002E 49D0              rcall _Task_Init
+ 0030                   .dbline -2
+ 0030           L3:
+ 0030                   .dbline 0 ; func end
+ 0030 B990              ld R11,y+
+ 0032 A990              ld R10,y+
+ 0034 0895              ret
+ 0036                   .dbsym r len 10 I
+ 0036                   .dbend
+ 0036                   .dbfunc e Task_Schedule _Task_Schedule fV
+ 0036                   .dbstruct 0 9 .2
+ 0036                   .dbfield 0 R_CYCLE i
+ 0036                   .dbfield 2 NMS i
+ 0036                   .dbfield 4 R_STATUS c
+ 0036                   .dbfield 5 LEVEL c
+ 0036                   .dbfield 6 LOCK c
+ 0036                   .dbfield 7 pf pfV
+ 0036                   .dbend
+ 0036                   .dbstruct 0 7 node
+ 0036                   .dbfield 0 id c
+ 0036                   .dbfield 1 task pS[.2]
+ 0036                   .dbfield 3 pre pS[node]
+ 0036                   .dbfield 5 next pS[node]
+ 0036                   .dbend
+ 0036           ;             sp -> R20,R21
+                        .even
+ 0036           _Task_Schedule::
+ 0036 4A93              st -y,R20
+ 0038 5A93              st -y,R21
+ 003A                   .dbline -1
+ 003A                   .dbline 47
+ 003A           ; }
+ 003A           ; 
+ 003A           ; 
+ 003A           ; //任务调度程序，ID越小优先级越高
+ 003A           ; void Task_Schedule(void){
+ 003A                   .dbline 51
+ 003A           ;     
+ 003A           ;     //任务优先级高的执行，执行完成后再次查找最高的优先级且就绪的任务并开始执行，非顺序执行
+ 003A           ;     Stud_Type *sp;          //双链表指针
+ 003A           ;     sp = root->next;        //指向首节点，首节点id的值最小，root是根节点
+ 003A E0910000          lds R30,_root
+ 003E F0910100          lds R31,_root+1
+ 0042 4581              ldd R20,z+5
+ 0044 5681              ldd R21,z+6
+ 0046 36C0              rjmp L8
+ 0048           L7:
+ 0048                   .dbline 52
+ 0048           ;     while(sp){
+ 0048                   .dbline 54
+ 0048           ;         //检查是否就绪，按照优先级高到低查找,执行完成后则重新开始，防止有高优先级的任务延误
+ 0048           ;         if(sp->task->R_STATUS == OK){               //如果已就绪，则执行该任务
+ 0048 FA01              movw R30,R20
+ 004A AF93              push R26
+ 004C BF93              push R27
+ 004E A181              ldd R26,z+1
+ 0050 B281              ldd R27,z+2
+ 0052 FD01              movw R30,R26
+ 0054 BF91              pop R27
+ 0056 AF91              pop R26
+ 0058 8481              ldd R24,z+4
+ 005A 8130              cpi R24,1
+ 005C 09F0              breq X2
+ 005E 27C0              rjmp L10
+ 0060           X2:
+ 0060           X0:
+ 0060                   .dbline 54
+ 0060                   .dbline 55
+ 0060           ;             cur_thread = sp->task->LEVEL;                     //获取当前正在运行的线程号
+ 0060 FA01              movw R30,R20
+ 0062 AF93              push R26
+ 0064 BF93              push R27
+ 0066 A181              ldd R26,z+1
+ 0068 B281              ldd R27,z+2
+ 006A FD01              movw R30,R26
+ 006C BF91              pop R27
+ 006E AF91              pop R26
+ 0070 2580              ldd R2,z+5
+ 0072 20920000          sts _cur_thread,R2
+ 0076                   .dbline 56
+ 0076           ;                       sp->task->R_STATUS = RUN;               //设置为运行态
+ 0076 82E0              ldi R24,2
+ 0078 FA01              movw R30,R20
+ 007A AF93              push R26
+ 007C BF93              push R27
+ 007E A181              ldd R26,z+1
+ 0080 B281              ldd R27,z+2
+ 0082 FD01              movw R30,R26
+ 0084 BF91              pop R27
+ 0086 AF91              pop R26
+ 0088 8483              std z+4,R24
+ 008A                   .dbline 57
+ 008A           ;             sp->task->pf();                                           //执行该函数
+ 008A FA01              movw R30,R20
+ 008C A181              ldd R26,z+1
+ 008E B281              ldd R27,z+2
+ 0090 1796              adiw R26,7
+ 0092 ED91              ld R30,x+
+ 0094 FC91              ld R31,x
+ 0096 00D0              rcall xicall
+ 0098                   .dbline 58
+ 0098           ;             sp->task->R_STATUS = STOP;              //设置为停止态
+ 0098 2224              clr R2
+ 009A FA01              movw R30,R20
+ 009C AF93              push R26
+ 009E BF93              push R27
+ 00A0 A181              ldd R26,z+1
+ 00A2 B281              ldd R27,z+2
+ 00A4 FD01              movw R30,R26
+ 00A6 BF91              pop R27
+ 00A8 AF91              pop R26
+ 00AA 2482              std z+4,R2
+ 00AC                   .dbline 59
+ 00AC           ;             break;                                 //结束本次循环，每次只执行一个任务
+ 00AC 07C0              rjmp L9
+ 00AE           L10:
+ 00AE                   .dbline 60
+ 00AE           ;         }else{
+ 00AE                   .dbline 61
+ 00AE           ;             sp = sp->next;              //指向下一个节点或任务
+ 00AE FA01              movw R30,R20
+ 00B0 4581              ldd R20,z+5
+ 00B2 5681              ldd R21,z+6
+ 00B4                   .dbline 62
+ 00B4           ;         }
+ 00B4                   .dbline 63
+ 00B4           ;     }
+ 00B4           L8:
+ 00B4                   .dbline 52
+ 00B4 4030              cpi R20,0
+ 00B6 4507              cpc R20,R21
+ 00B8 09F0              breq X3
+ 00BA C6CF              rjmp L7
+ 00BC           X3:
+ 00BC           X1:
+ 00BC           L9:
+ 00BC                   .dbline -2
+ 00BC           L6:
+ 00BC                   .dbline 0 ; func end
+ 00BC 5991              ld R21,y+
+ 00BE 4991              ld R20,y+
+ 00C0 0895              ret
+ 00C2                   .dbsym r sp 20 pS[node]
+ 00C2                   .dbend
+ 00C2                   .dbfunc e Task_Init _Task_Init fV
+ 00C2           ;              p -> R20,R21
+                        .even
+ 00C2           _Task_Init::
+ 00C2 4A93              st -y,R20
+ 00C4 5A93              st -y,R21
+ 00C6                   .dbline -1
+ 00C6                   .dbline 69
+ 00C6           ; }
+ 00C6           ; 
+ 00C6           ; 
+ 00C6           ; //任务初始化，建立根节点
+ 00C6           ; void Task_Init(void)
+ 00C6           ; {
+ 00C6                   .dbline 72
+ 00C6           ;       Stud_Type *p;  //申请双链表指针
+ 00C6           ; 
+ 00C6           ;       p = (Stud_Type *)malloc(sizeof(Stud_Type));     //分配内存
+ 00C6 07E0              ldi R16,7
+ 00C8 10E0              ldi R17,0
+ 00CA 00D0              rcall _malloc
+ 00CC A801              movw R20,R16
+ 00CE                   .dbline 73
+ 00CE           ;     p->id = 0;                                      //节点初始化
+ 00CE 2224              clr R2
+ 00D0 FA01              movw R30,R20
+ 00D2 2082              std z+0,R2
+ 00D4                   .dbline 74
+ 00D4           ;       p->pre = NULL;
+ 00D4 3324              clr R3
+ 00D6 3482              std z+4,R3
+ 00D8 2382              std z+3,R2
+ 00DA                   .dbline 75
+ 00DA           ;       p->next = NULL;
+ 00DA 3682              std z+6,R3
+ 00DC 2582              std z+5,R2
+ 00DE                   .dbline 76
+ 00DE           ;       p->task = NULL;
+ 00DE 3282              std z+2,R3
+ 00E0 2182              std z+1,R2
+ 00E2                   .dbline 77
+ 00E2           ;       root = p;           //保存根节点
+ 00E2 50930100          sts _root+1,R21
+ 00E6 40930000          sts _root,R20
+ 00EA                   .dbline -2
+ 00EA           L12:
+ 00EA                   .dbline 0 ; func end
+ 00EA 5991              ld R21,y+
+ 00EC 4991              ld R20,y+
+ 00EE 0895              ret
+ 00F0                   .dbsym r p 20 pS[node]
+ 00F0                   .dbend
+ 00F0                   .dbfunc e Search_Node _Search_Node fpS[node]
+ 00F0           ;              h -> R20,R21
+ 00F0           ;             id -> R18
+ 00F0           ;              p -> R16,R17
+                        .even
+ 00F0           _Search_Node::
+ 00F0 4A93              st -y,R20
+ 00F2 5A93              st -y,R21
+ 00F4                   .dbline -1
+ 00F4                   .dbline 82
+ 00F4           ; }
+ 00F4           ; 
+ 00F4           ; //查找第一个大于当前id的节点或如果没有则返回最后一个节点
+ 00F4           ; Stud_Type * Search_Node(Stud_Type *p , uchar id)
+ 00F4           ; {
+ 00F4                   .dbline 84
+ 00F4           ;       Stud_Type *h;
+ 00F4           ;       h = p->next;
+ 00F4 F801              movw R30,R16
+ 00F6 4581              ldd R20,z+5
+ 00F8 5681              ldd R21,z+6
+ 00FA 16C0              rjmp L15
+ 00FC           L14:
+ 00FC                   .dbline 85
+ 00FC           ;       while(h){
+ 00FC                   .dbline 86
+ 00FC           ;               if(h->id > id){ //找到第一个比id大的节点
+ 00FC 222E              mov R2,R18
+ 00FE 3324              clr R3
+ 0100 FA01              movw R30,R20
+ 0102 4080              ldd R4,z+0
+ 0104 5524              clr R5
+ 0106 2414              cp R2,R4
+ 0108 3504              cpc R3,R5
+ 010A 14F4              brge L17
+ 010C           X4:
+ 010C                   .dbline 86
+ 010C                   .dbline 87
+ 010C           ;                       return h;
+ 010C 8F01              movw R16,R30
+ 010E 11C0              rjmp L13
+ 0110           L17:
+ 0110                   .dbline 89
+ 0110           ;               }
+ 0110           ;               if(h->next == NULL) return h;   //判断是否是到最后的节点，如果到最后也没找到，返回最后一个节点
+ 0110 FA01              movw R30,R20
+ 0112 2580              ldd R2,z+5
+ 0114 3680              ldd R3,z+6
+ 0116 2220              tst R2
+ 0118 21F4              brne L19
+ 011A 3320              tst R3
+ 011C 11F4              brne L19
+ 011E           X5:
+ 011E                   .dbline 89
+ 011E 8F01              movw R16,R30
+ 0120 08C0              rjmp L13
+ 0122           L19:
+ 0122                   .dbline 90
+ 0122           ;               else h = h->next;
+ 0122 FA01              movw R30,R20
+ 0124 4581              ldd R20,z+5
+ 0126 5681              ldd R21,z+6
+ 0128                   .dbline 91
+ 0128           ;       }
+ 0128           L15:
+ 0128                   .dbline 85
+ 0128 4030              cpi R20,0
+ 012A 4507              cpc R20,R21
+ 012C 39F7              brne L14
+ 012E           X6:
+ 012E                   .dbline 92
+ 012E           ;       return NULL;
+ 012E 0027              clr R16
+ 0130 1127              clr R17
+ 0132                   .dbline -2
+ 0132           L13:
+ 0132                   .dbline 0 ; func end
+ 0132 5991              ld R21,y+
+ 0134 4991              ld R20,y+
+ 0136 0895              ret
+ 0138                   .dbsym r h 20 pS[node]
+ 0138                   .dbsym r id 18 c
+ 0138                   .dbsym r p 16 pS[node]
+ 0138                   .dbend
+ 0138                   .dbfunc e Task_Add _Task_Add fV
+ 0138           ;              c -> R22,R23
+ 0138           ;              n -> R20,R21
+ 0138           ;         handle -> R10,R11
+                        .even
+ 0138           _Task_Add::
+ 0138 00D0              rcall push_xgsetF03C
+ 013A 5801              movw R10,R16
+ 013C                   .dbline -1
+ 013C                   .dbline 120
+ 013C           ; }
+ 013C           ; 
+ 013C           ; 
+ 013C           ; /**************************************************
+ 013C           ; //查找某一个节点是否存在，存在返回节点，不存在返回NULL
+ 013C           ; Stud_Type * Get_Node(uint8_t level)
+ 013C           ; {
+ 013C           ;       Stud_Type *h;
+ 013C           ;       h = root->next;
+ 013C           ;       while(h){
+ 013C           ;               if(h->id > level){      //找到第一个比id大的节点
+ 013C           ;                       return h;
+ 013C           ;               }
+ 013C           ;               h = h->next;
+ 013C           ;       }
+ 013C           ;       return NULL;
+ 013C           ; }
+ 013C           ; ***************************************************/
+ 013C           ; 
+ 013C           ; 
+ 013C           ; /********************************************
+ 013C           ; *   任务添加函数Task_Add
+ 013C           ; *   RUN_Handle_Type  handle 任务句柄
+ 013C           ; *   任务节点按照id（优先级）从小到大顺序排列
+ 013C           ; *   函数类型为无返回值的函数
+ 013C           ; ********************************************/
+ 013C           ; void Task_Add(RUN_Handle_Type *handle)
+ 013C           ; {
+ 013C                   .dbline 122
+ 013C           ;     Stud_Type *c, *n;
+ 013C           ;     if(root->next == NULL){     //先判断根节点是否为空，就是当前没有节点
+ 013C E0910000          lds R30,_root
+ 0140 F0910100          lds R31,_root+1
+ 0144 2580              ldd R2,z+5
+ 0146 3680              ldd R3,z+6
+ 0148 2220              tst R2
+ 014A D9F4              brne L22
+ 014C 3320              tst R3
+ 014E C9F4              brne L22
+ 0150           X7:
+ 0150                   .dbline 122
+ 0150                   .dbline 123
+ 0150           ;         n = (Stud_Type *)malloc(sizeof(Stud_Type));           //申请内存
+ 0150 07E0              ldi R16,7
+ 0152 10E0              ldi R17,0
+ 0154 00D0              rcall _malloc
+ 0156 A801              movw R20,R16
+ 0158                   .dbline 124
+ 0158           ;               n->id = handle->LEVEL;                  //添加任务id
+ 0158 F501              movw R30,R10
+ 015A 2580              ldd R2,z+5
+ 015C FA01              movw R30,R20
+ 015E 2082              std z+0,R2
+ 0160                   .dbline 125
+ 0160           ;               n->task = handle;                               //添加任务句柄
+ 0160 B282              std z+2,R11
+ 0162 A182              std z+1,R10
+ 0164                   .dbline 126
+ 0164           ;               root->next = n;                 //设置根节点的next是新节点的地址
+ 0164 E0910000          lds R30,_root
+ 0168 F0910100          lds R31,_root+1
+ 016C 5683              std z+6,R21
+ 016E 4583              std z+5,R20
+ 0170                   .dbline 127
+ 0170           ;         n->pre = root;                  //新节点的pre指向root
+ 0170 1F01              movw R2,R30
+ 0172 FA01              movw R30,R20
+ 0174 3482              std z+4,R3
+ 0176 2382              std z+3,R2
+ 0178                   .dbline 128
+ 0178           ;         n->next = NULL;                                   //设置新节点的next为NULL
+ 0178 2224              clr R2
+ 017A 3324              clr R3
+ 017C 3682              std z+6,R3
+ 017E 2582              std z+5,R2
+ 0180                   .dbline 129
+ 0180           ;     }else{      //有根节点
+ 0180 43C0              rjmp L23
+ 0182           L22:
+ 0182                   .dbline 129
+ 0182                   .dbline 130
+ 0182           ;         c = Search_Node(root , handle->LEVEL);                        //从根节点开始查找，查找第一个大于当前id的节点，没有就返回最后一个节点
+ 0182 F501              movw R30,R10
+ 0184 2581              ldd R18,z+5
+ 0186 00910000          lds R16,_root
+ 018A 10910100          lds R17,_root+1
+ 018E B0DF              rcall _Search_Node
+ 0190 B801              movw R22,R16
+ 0192                   .dbline 131
+ 0192           ;         if(c == NULL){
+ 0192 0030              cpi R16,0
+ 0194 0107              cpc R16,R17
+ 0196 09F4              brne L24
+ 0198           X8:
+ 0198                   .dbline 131
+ 0198                   .dbline 133
+ 0198           ;                       //printf("Search node error!\r\n");
+ 0198           ;                       ;
+ 0198                   .dbline 134
+ 0198           ;               } 
+ 0198 37C0              rjmp L25
+ 019A           L24:
+ 019A                   .dbline 135
+ 019A           ;         else{
+ 019A                   .dbline 136
+ 019A           ;             n = (Stud_Type *)malloc(sizeof(Stud_Type));               //申请内存
+ 019A 07E0              ldi R16,7
+ 019C 10E0              ldi R17,0
+ 019E 00D0              rcall _malloc
+ 01A0 6801              movw R12,R16
+ 01A2 A601              movw R20,R12
+ 01A4                   .dbline 137
+ 01A4           ;             n->id = handle->LEVEL;                    //添加任务id
+ 01A4 F501              movw R30,R10
+ 01A6 2580              ldd R2,z+5
+ 01A8 FA01              movw R30,R20
+ 01AA 2082              std z+0,R2
+ 01AC                   .dbline 138
+ 01AC           ;             n->task = handle;                         //添加任务句柄
+ 01AC B282              std z+2,R11
+ 01AE A182              std z+1,R10
+ 01B0                   .dbline 139
+ 01B0           ;             if(c->id < handle->LEVEL){                //没有大于当前的id的节点，则追加到最后节点
+ 01B0 F501              movw R30,R10
+ 01B2 2580              ldd R2,z+5
+ 01B4 FB01              movw R30,R22
+ 01B6 3080              ldd R3,z+0
+ 01B8 3214              cp R3,R2
+ 01BA 60F4              brsh L26
+ 01BC           X9:
+ 01BC                   .dbline 139
+ 01BC                   .dbline 140
+ 01BC           ;                 n->next = NULL;                               //设置新节点的next为NULL
+ 01BC 2224              clr R2
+ 01BE 3324              clr R3
+ 01C0 FA01              movw R30,R20
+ 01C2 3682              std z+6,R3
+ 01C4 2582              std z+5,R2
+ 01C6                   .dbline 141
+ 01C6           ;                 c->next = n;                          //设置查找的节点的next是新节点的地址
+ 01C6 FB01              movw R30,R22
+ 01C8 5683              std z+6,R21
+ 01CA 4583              std z+5,R20
+ 01CC                   .dbline 142
+ 01CC           ;                 n->pre = c;                 //新节点的pre指向最后一个节点
+ 01CC FA01              movw R30,R20
+ 01CE 7483              std z+4,R23
+ 01D0 6383              std z+3,R22
+ 01D2                   .dbline 143
+ 01D2           ;             }else if(c->id > handle->LEVEL){          //有大于当前的id的节点，则插入到当前节点之前
+ 01D2 1AC0              rjmp L27
+ 01D4           L26:
+ 01D4                   .dbline 143
+ 01D4 F501              movw R30,R10
+ 01D6 2580              ldd R2,z+5
+ 01D8 3324              clr R3
+ 01DA FB01              movw R30,R22
+ 01DC 4080              ldd R4,z+0
+ 01DE 5524              clr R5
+ 01E0 2414              cp R2,R4
+ 01E2 3504              cpc R3,R5
+ 01E4 8CF4              brge L28
+ 01E6           X10:
+ 01E6                   .dbline 143
+ 01E6                   .dbline 144
+ 01E6           ;                 n->pre = c->pre;
+ 01E6 2380              ldd R2,z+3
+ 01E8 3480              ldd R3,z+4
+ 01EA FA01              movw R30,R20
+ 01EC 3482              std z+4,R3
+ 01EE 2382              std z+3,R2
+ 01F0                   .dbline 145
+ 01F0           ;                 c->pre->next = n;                     //当前节点的上一个节点的next指向新节点
+ 01F0 FB01              movw R30,R22
+ 01F2 A381              ldd R26,z+3
+ 01F4 B481              ldd R27,z+4
+ 01F6 1596              adiw R26,5
+ 01F8 4D93              st x+,R20
+ 01FA 5C93              st x,R21
+ 01FC                   .dbline 146
+ 01FC           ;                 n->next = c;                      //新节点的next指向当前节点
+ 01FC FA01              movw R30,R20
+ 01FE 7683              std z+6,R23
+ 0200 6583              std z+5,R22
+ 0202                   .dbline 147
+ 0202           ;                 c->pre = n;
+ 0202 FB01              movw R30,R22
+ 0204 5483              std z+4,R21
+ 0206 4383              std z+3,R20
+ 0208                   .dbline 148
+ 0208           ;             }
+ 0208           L28:
+ 0208           L27:
+ 0208                   .dbline 149
+ 0208           ;         }     
+ 0208           L25:
+ 0208                   .dbline 150
+ 0208           ;     }
+ 0208           L23:
+ 0208                   .dbline -2
+ 0208           L21:
+ 0208                   .dbline 0 ; func end
+ 0208 00C0              rjmp pop_xgsetF03C
+ 020A                   .dbsym r c 22 pS[node]
+ 020A                   .dbsym r n 20 pS[node]
+ 020A                   .dbsym r handle 10 pS[.2]
+ 020A                   .dbend
+ 020A                   .dbfunc e Task_Del _Task_Del fV
+ 020A           ;             sp -> R20,R21
+                        .even
+ 020A           _Task_Del::
+ 020A 4A93              st -y,R20
+ 020C 5A93              st -y,R21
+ 020E A801              movw R20,R16
+ 0210                   .dbline -1
+ 0210                   .dbline 157
+ 0210           ;       
+ 0210           ; }
+ 0210           ; 
+ 0210           ; 
+ 0210           ; //删除任务，将任务从列表中删除
+ 0210           ; void Task_Del(Stud_Type *sp)
+ 0210           ; {
+ 0210                   .dbline 159
+ 0210           ;       // 假如按照后面排列：节点A-->节点SP-->节点B
+ 0210           ;     sp->next->pre = sp->pre;        //后面节点B的pre指向要删除节点sp前面节点A的地址
+ 0210 FA01              movw R30,R20
+ 0212 2380              ldd R2,z+3
+ 0214 3480              ldd R3,z+4
+ 0216 A581              ldd R26,z+5
+ 0218 B681              ldd R27,z+6
+ 021A 1396              adiw R26,3
+ 021C 2D92              st x+,R2
+ 021E 3C92              st x,R3
+ 0220                   .dbline 160
+ 0220           ;       sp->pre->next = sp->next;       //要删除节点SP前面节点A的next指向后面节点B的地址
+ 0220 2580              ldd R2,z+5
+ 0222 3680              ldd R3,z+6
+ 0224 A381              ldd R26,z+3
+ 0226 B481              ldd R27,z+4
+ 0228 1596              adiw R26,5
+ 022A 2D92              st x+,R2
+ 022C 3C92              st x,R3
+ 022E                   .dbline 161
+ 022E           ;       free(sp);                       //删除节点，释放内存
+ 022E 8F01              movw R16,R30
+ 0230 00D0              rcall _free
+ 0232                   .dbline -2
+ 0232           L30:
+ 0232                   .dbline 0 ; func end
+ 0232 5991              ld R21,y+
+ 0234 4991              ld R20,y+
+ 0236 0895              ret
+ 0238                   .dbsym r sp 20 pS[node]
+ 0238                   .dbend
+ 0238                   .dbfunc e Task_Manager _Task_Manager fV
+ 0238           ;             sp -> R16,R17
+                        .even
+ 0238           _Task_Manager::
+ 0238                   .dbline -1
+ 0238                   .dbline 166
+ 0238           ; }
+ 0238           ; 
+ 0238           ; 
+ 0238           ; //对任务延时，时间信号及任务状态进行管理
+ 0238           ; void Task_Manager(void){
+ 0238                   .dbline 169
+ 0238           ;     
+ 0238           ;       Stud_Type *sp;
+ 0238           ;       sp = root->next;        //指向首节点
+ 0238 E0910000          lds R30,_root
+ 023C F0910100          lds R31,_root+1
+ 0240 0581              ldd R16,z+5
+ 0242 1681              ldd R17,z+6
+ 0244 46C0              rjmp L33
+ 0246           L32:
+ 0246                   .dbline 171
+ 0246           ; 
+ 0246           ;       while(sp){
+ 0246                   .dbline 173
+ 0246           ;               //任务定时及任务状态处理
+ 0246           ;               if(!sp->task->LOCK){                                  //如果没有上锁，则执行下面的延时
+ 0246 F801              movw R30,R16
+ 0248 AF93              push R26
+ 024A BF93              push R27
+ 024C A181              ldd R26,z+1
+ 024E B281              ldd R27,z+2
+ 0250 FD01              movw R30,R26
+ 0252 BF91              pop R27
+ 0254 AF91              pop R26
+ 0256 2680              ldd R2,z+6
+ 0258 2220              tst R2
+ 025A 09F0              breq X15
+ 025C 2FC0              rjmp L35
+ 025E           X15:
+ 025E           X11:
+ 025E                   .dbline 173
+ 025E                   .dbline 174
+ 025E           ;         if(sp->task->NMS > 0) sp->task->NMS--;            //延时减一
+ 025E F801              movw R30,R16
+ 0260 A181              ldd R26,z+1
+ 0262 B281              ldd R27,z+2
+ 0264 1296              adiw R26,2
+ 0266 2D90              ld R2,x+
+ 0268 3C90              ld R3,x
+ 026A 2220              tst R2
+ 026C 11F4              brne X12
+ 026E 3320              tst R3
+ 0270 49F0              breq L37
+ 0272           X12:
+ 0272                   .dbline 174
+ 0272 8181              ldd R24,z+1
+ 0274 9281              ldd R25,z+2
+ 0276 0296              adiw R24,2
+ 0278 FC01              movw R30,R24
+ 027A 8081              ldd R24,z+0
+ 027C 9181              ldd R25,z+1
+ 027E 0197              sbiw R24,1
+ 0280 9183              std z+1,R25
+ 0282 8083              std z+0,R24
+ 0284           L37:
+ 0284                   .dbline 175
+ 0284           ;             if(sp->task->NMS == 0){
+ 0284 F801              movw R30,R16
+ 0286 A181              ldd R26,z+1
+ 0288 B281              ldd R27,z+2
+ 028A 1296              adiw R26,2
+ 028C 2D90              ld R2,x+
+ 028E 3C90              ld R3,x
+ 0290 2220              tst R2
+ 0292 E1F4              brne L36
+ 0294 3320              tst R3
+ 0296 D1F4              brne L36
+ 0298           X13:
+ 0298                   .dbline 175
+ 0298                   .dbline 176
+ 0298           ;                 sp->task->R_STATUS = OK;                      //如果减到0，延时时间到设置状态为就绪态OK
+ 0298 81E0              ldi R24,1
+ 029A AF93              push R26
+ 029C BF93              push R27
+ 029E A181              ldd R26,z+1
+ 02A0 B281              ldd R27,z+2
+ 02A2 FD01              movw R30,R26
+ 02A4 BF91              pop R27
+ 02A6 AF91              pop R26
+ 02A8 8483              std z+4,R24
+ 02AA                   .dbline 177
+ 02AA           ;                 sp->task->NMS = sp->task->R_CYCLE;            //加载延时周期
+ 02AA F801              movw R30,R16
+ 02AC 4180              ldd R4,z+1
+ 02AE 5280              ldd R5,z+2
+ 02B0 F201              movw R30,R4
+ 02B2 2080              ldd R2,z+0
+ 02B4 3180              ldd R3,z+1
+ 02B6 3382              std z+3,R3
+ 02B8 2282              std z+2,R2
+ 02BA                   .dbline 178
+ 02BA           ;             }
+ 02BA                   .dbline 179
+ 02BA           ;         }else{
+ 02BA 08C0              rjmp L36
+ 02BC           L35:
+ 02BC                   .dbline 179
+ 02BC                   .dbline 180
+ 02BC           ;             sp->task->NMS = sp->task->R_CYCLE;                 //如果上锁，加载延时周期，再次运行时重新开始
+ 02BC F801              movw R30,R16
+ 02BE 2181              ldd R18,z+1
+ 02C0 3281              ldd R19,z+2
+ 02C2 F901              movw R30,R18
+ 02C4 2080              ldd R2,z+0
+ 02C6 3180              ldd R3,z+1
+ 02C8 3382              std z+3,R3
+ 02CA 2282              std z+2,R2
+ 02CC                   .dbline 181
+ 02CC           ;         }
+ 02CC           L36:
+ 02CC                   .dbline 182
+ 02CC           ;               sp = sp->next;                          //处理下一个节点
+ 02CC F801              movw R30,R16
+ 02CE 0581              ldd R16,z+5
+ 02D0 1681              ldd R17,z+6
+ 02D2                   .dbline 183
+ 02D2           ;       }
+ 02D2           L33:
+ 02D2                   .dbline 171
+ 02D2 0030              cpi R16,0
+ 02D4 0107              cpc R16,R17
+ 02D6 09F0              breq X16
+ 02D8 B6CF              rjmp L32
+ 02DA           X16:
+ 02DA           X14:
+ 02DA                   .dbline -2
+ 02DA           L31:
+ 02DA                   .dbline 0 ; func end
+ 02DA 0895              ret
+ 02DC                   .dbsym r sp 16 pS[node]
+ 02DC                   .dbend
+                        .area vector(rom, abs)
+                        .org 18
+ 0012 6EC1              rjmp _timer2_ovf_isr
+                        .area text(rom, con, rel)
+ 02DC                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\bsy_os.c
+ 02DC                   .dbfunc e timer2_ovf_isr _timer2_ovf_isr fV
+                        .even
+ 02DC           _timer2_ovf_isr::
+ 02DC 0A92              st -y,R0
+ 02DE 1A92              st -y,R1
+ 02E0 2A92              st -y,R2
+ 02E2 3A92              st -y,R3
+ 02E4 4A92              st -y,R4
+ 02E6 5A92              st -y,R5
+ 02E8 6A92              st -y,R6
+ 02EA 7A92              st -y,R7
+ 02EC 8A92              st -y,R8
+ 02EE 9A92              st -y,R9
+ 02F0 0A93              st -y,R16
+ 02F2 1A93              st -y,R17
+ 02F4 2A93              st -y,R18
+ 02F6 3A93              st -y,R19
+ 02F8 8A93              st -y,R24
+ 02FA 9A93              st -y,R25
+ 02FC AA93              st -y,R26
+ 02FE BA93              st -y,R27
+ 0300 EA93              st -y,R30
+ 0302 FA93              st -y,R31
+ 0304 0FB6              IN R0,63
+ 0306 0A92              st -y,R0
+ 0308                   .dbline -1
+ 0308                   .dbline 215
+ 0308           ; }
+ 0308           ; 
+ 0308           ; /******************************************
+ 0308           ; *   任务中可变延时函数Task_Delay_ms
+ 0308           ; *   nms 延时时间多少ms
+ 0308           ; ******************************************/
+ 0308           ; /****************************
+ 0308           ; void Task_Delay_ms(uint nms){
+ 0308           ;     Stud_Type *sp;
+ 0308           ;     sp = root->next;
+ 0308           ;     
+ 0308           ;     while(sp){
+ 0308           ;         if(sp->id == cur_thread){       //找到对应的节点
+ 0308           ;             sp->task->NMS = nms;      //改变该节点的延时时间
+ 0308           ;             break;
+ 0308           ;         }
+ 0308           ;         sp = sp->next;
+ 0308           ;     }
+ 0308           ; }
+ 0308           ; ***************************/
+ 0308           ; //延时函数
+ 0308           ; /******************
+ 0308           ; void  delay_ms(uint ms)
+ 0308           ; {
+ 0308           ;     delay_cnt = ms;   //设置延时值
+ 0308           ;     while(delay_cnt != 0);
+ 0308           ; }
+ 0308           ; *********************/
+ 0308           ; 
+ 0308           ; #pragma interrupt_handler timer2_ovf_isr:10
+ 0308           ; void timer2_ovf_isr(void)
+ 0308           ; { 
+ 0308                   .dbline 216
+ 0308           ;     TCNT2 = 131;                           //1000hz频率，1ms中断一次
+ 0308 83E8              ldi R24,131
+ 030A 8093B200          sts 178,R24
+ 030E                   .dbline 217
+ 030E           ;     Task_Manager();                        //定时调用内核任务处理程序
+ 030E 94DF              rcall _Task_Manager
+ 0310                   .dbline -2
+ 0310           L41:
+ 0310                   .dbline 0 ; func end
+ 0310 0990              ld R0,y+
+ 0312 0FBE              OUT 63,R0
+ 0314 F991              ld R31,y+
+ 0316 E991              ld R30,y+
+ 0318 B991              ld R27,y+
+ 031A A991              ld R26,y+
+ 031C 9991              ld R25,y+
+ 031E 8991              ld R24,y+
+ 0320 3991              ld R19,y+
+ 0322 2991              ld R18,y+
+ 0324 1991              ld R17,y+
+ 0326 0991              ld R16,y+
+ 0328 9990              ld R9,y+
+ 032A 8990              ld R8,y+
+ 032C 7990              ld R7,y+
+ 032E 6990              ld R6,y+
+ 0330 5990              ld R5,y+
+ 0332 4990              ld R4,y+
+ 0334 3990              ld R3,y+
+ 0336 2990              ld R2,y+
+ 0338 1990              ld R1,y+
+ 033A 0990              ld R0,y+
+ 033C 1895              reti
+ 033E                   .dbend
+                        .area bss(ram, con, rel)
+ 0000                   .dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\bsy_os.c
+ 0000           _root::
+ 0000                   .blkb 2
+ 0002                   .dbsym e root _root pS[node]
+ 0002           ;     //if(delay_cnt > 0) delay_cnt--;       //delay_ms专用计数器
+ 0002           ;               
+ 0002           ; }
+ 0002           ; 
+ 0002           ; 

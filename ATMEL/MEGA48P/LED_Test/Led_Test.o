@@ -1,0 +1,37 @@
+XL
+H 1 areas 5 global symbols
+M Led_Test.c
+S _Task_Schedule Ref0000
+S _Bsy_Os_Init Ref0000
+S _Task_led0 Ref0000
+A text size 1E flags 0
+dbfile Led_Test.c
+dbfile E:\BSY_OS\ATMEL\MEGA48P\LED_Test\Led_Test.c
+dbfunc e port_init 0 fV
+dbline FFFFFFFF 0
+dbline 8 0
+dbline B 0
+dbline C 4
+dbline FFFFFFFE 8
+dbline 0 8
+dbfunc e main A fV
+dbline FFFFFFFF A
+dbline 13 A
+dbline 14 A
+dbline 17 C
+dbline 18 12
+dbline 1A 14
+dbline 1D 18
+dbline 1E 18
+dbline 1F 1A
+dbline 1C 1A
+dbline FFFFFFFE 1C
+dbline 0 1C
+S _main Def000A
+S _port_init Def0000
+T 00 00 8C E3 87 B9 22 24 28 B8 08 95
+R 00 00 00 00
+T 0A 00 FA DF 08 EC 10 E0 00 D0 78 94 00 D0 01 C0
+R 00 00 00 00 82 08 01 00 82 0C 02 00
+T 18 00 00 D0 FE CF 08 95
+R 00 00 00 00 82 02 00 00

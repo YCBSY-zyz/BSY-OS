@@ -1,0 +1,34 @@
+#include   "led_test.h"
+#include   "bsy_os.h"
+#include   "led.h"
+
+
+//端口初始化函数
+void port_init(void)	
+{
+    //PORTB = 0x01;
+    //DDRB  = 0xfe;
+    DDRC  = 0x3c;           //led0-->PC2;led1-->PC3;led2-->PC4;
+    PORTC = 0x00;           //初始化LED端口
+    //PORTD = 0xf8;
+    //DDRD  = 0xe6;
+}
+
+//主函数
+void  main (void)
+{
+    port_init();		//初始化端口
+    
+    //每个线程任务占用不到20 Byte内存，内存按照任务 x 20计算
+	Bsy_Os_Init(200);	//初始化BSY-OS操作系统，分配堆内存200Byte
+    SEI();				//开启中断
+    
+	Task_led0();		//添加LED 任务0
+		
+    while(1)
+    {
+        Task_Schedule();	//系统调度运行函数
+   	} 
+}
+
+

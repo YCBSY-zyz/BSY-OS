@@ -1,0 +1,46 @@
+#ifndef __CAN_H
+#define __CAN_H
+
+#include "sys.h"
+#include "stm32f10x_can.h"
+
+/////////////////////////////////////////////////// 
+//DBSB_485控制板   
+//修改日期:2024/05/31
+//版本：V1.0
+//版权所有，盗版必究。
+//Copyright(C) 贝斯源科技有限公司 2024-2034
+///////////////////////////////////////////////////
+
+//CAN接收RX0中断使能
+#define CAN_RX0_INT_ENABLE	0		//0,不使能;1,使能.								    
+										 							 				    
+u8 CAN_Mode_Init(u8 tsjw,u8 tbs2,u8 tbs1,u16 brp,u8 mode);//CAN初始化
+ 
+u8 Can_Send_Msg(u8* msg,u8 len);						//发送数据
+
+u8 Can_Receive_Msg(u8 *buf);							//接收数据
+void Task_Can(void);
+
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
